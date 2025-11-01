@@ -17,27 +17,22 @@ def CircuitParameters():
     qc.barrier()
     qc.measure([0, 1, 2], [0, 1, 2])
     return qc
-      # measure all
-
-def NonErasureToErasureError(K):
-    Kdim3 = np.zeros((3,3))
-    Kdim3[:2:2] = np.sqrt(1-ploss) * K
-
-
 
 # look at ancillas & syndrome extraction if time
 
-
-# --- Step 2: Kraus operator for qubit loss (|1> -> |0>) ---
-# 
-
 ploss = 0.2  # loss probability
 
-Error0 = np.sqrt(1-ploss)*np.eye(3)
 
-K0 = np.array([[1, 0], [0, np.sqrt(1 - ploss)]])
-K1 = np.array([[0, np.sqrt(ploss)], [0, 0]])
-krausError = kraus_error([K0, K1])
+#qutrit (3by3 matrix, lol)
+KrausError0 = np.zeros(3,3)
+KrausError1 = np.zeros(3,3)
+KrausError0[0,0] = 1
+KrausError0[1,1] = np.sqrt(1 - ploss)
+KrausError0[2,2] = 1
+KrausError1[2,3] = np.sqrt(ploss)
+
+
+krausError = kraus_error([KrausError0, KrausError1])
 
 '''⚙️ 2. What makes a Kraus error “erasure-compatible”?
 
@@ -67,13 +62,11 @@ elif RandomErrorChoose == 2:
 
 
 #id  means that the circuit will automatically apply the error to all processes, like idle instead of identity
-# --- Step 3: Simulate with noise ---
+
+
 simulator = AerSimulator(noise_model = noiseModel)
 
 qc = CircuitParameters()
-#check what this is
-
-#end check
 
 TranspiledQuantumCircuit = transpile(qc, simulator)
 result = simulator.run(TranspiledQuantumCircuit, shots=2000).result()
@@ -81,8 +74,6 @@ counts = result.get_counts()
 print("Raw measurement results with qubit loss:", counts)
 
 
-
-# --- Step 4: Define decoders ---
 def normal_decoder(counts):
     """Majority vote, assumes no loss"""
     logical_counts = {"0":0, "1":0}
@@ -95,10 +86,8 @@ def normal_decoder(counts):
     return logical_counts
 
 def loss_aware_decoder(counts):
-    """Ignore lost qubits: if tie, keep coherence"""
     logical_counts = {"0":0, "1":0}
     for outcome, freq in counts.items():
-        # treat 'loss' as erasure (we simulate loss by bias in results)
         zeros = outcome.count("0")
         ones = outcome.count("1")
         if zeros > ones:
@@ -106,7 +95,6 @@ def loss_aware_decoder(counts):
         elif ones > zeros:
             logical_counts["1"] += freq
         else:
-            # If tie (e.g., 01?), keep superposition (count half-half)
             logical_counts["0"] += freq/2
             logical_counts["1"] += freq/2
     return logical_counts
