@@ -6,17 +6,18 @@ from qiskit_aer.noise.errors import kraus_error
 
 # --- Step 1: Build a simple repetition code (encode |ψ> into 3 qubits) ---
 def CircuitParameters():
-    qc = QuantumCircuit(3, 3)
+    qc = QuantumCircuit(4, 4)
     qc.h(0)             # Start with |+> = (|0>+|1>)/√2 as logical state
     qc.cx(0, 1)         # Encode
     qc.cx(0, 2)
+    qc.cx(0, 3)
     qc.barrier()
-    qc.measure([0, 1, 2], [0, 1, 2])
+    qc.measure([0, 1, 2, 3], [0, 1, 2, 3])
     return qc
 
 
 # --- Step 2: Kraus operator for qubit loss (|1> -> |0>) ---
-ploss = 0.2  # loss probability
+ploss = 0.002  # loss probability
 
 K0 = np.array([[1, 0], [0, np.sqrt(1 - ploss)]])
 K1 = np.array([[0, np.sqrt(ploss)], [0, 0]])
