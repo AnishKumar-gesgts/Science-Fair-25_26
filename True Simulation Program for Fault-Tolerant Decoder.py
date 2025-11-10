@@ -9,14 +9,17 @@ import random
 
 
 # --- Step 1: Build a simple repetition code (encode |ψ> into 3 qubits) ---
-def CircuitParameters():
-    qc = QuantumCircuit(3, 3)
+def StandardCircuitParameters():
+    qc = QuantumCircuit(6,3)
     qc.h(0)             # Start with |+> = (|0>+|1>)/√2 as logical state
-    qc.cx(0, 1)         # Encode
-    qc.cx(0, 2)
-    qc.barrier()
-    qc.measure([0, 1, 2], [0, 1, 2])
+    qc.cx(0,1)         # Encode
+    qc.cx(0,2)
+
+    qc.measure([0,1,2], [0,1,2])
     return qc
+
+
+
 
 # look at ancillas & syndrome extraction if time
 
@@ -24,15 +27,17 @@ ploss = 0.2  # loss probability
 
 A0 = np.array([[1, 0],[0, np.sqrt(1 - ploss)]])
 A1 = np.array([[0, np.sqrt(ploss)], [0, 0]])
-krausNormalError = kraus_error([A0, A1])
+krausDataError = kraus_error([A0, A1])
 
+KrausError0 = np.array([[1, 0],[0, np.sqrt(1 - ploss)]])
+KrausError1 = np.array([[0, np.sqrt(ploss)], [0, 0]])
+krausAncillas = kraus_error([KrausError0, KrausError1])
 
 #qutrit (3by3 matrix, lol) WHICH DONT WORK NOOOOOOOO
-KrausError0 = np.array([[1,0,0],[0,np.sqrt(1-ploss),0],[0,0,1]])
-KrausError1 = np.array([[0,0,0],[0,0,0],[0,np.sqrt(ploss),0]])
 
 
-krausErasureAwareError = kraus_error([KrausError0, KrausError1])
+
+
 
 '''⚙️ 2. What makes a Kraus error “erasure-compatible”?
 
@@ -54,7 +59,7 @@ The hardware can produce a classical signal (“no click”, “no fluorescence�
 #100% probability satisfied array [1,0], [0,1] is identity
 
 noiseErasureModel = NoiseModel()
-noiseErasureModel.add_all_qubit_quantum_error(krausErasureAwareError, ["cx", "h"])
+noiseErasureModel.add_all_qubit_quantum_error(krausAncillas, ["cx", "h"])
 noiseNormalModel = NoiseModel()
 noiseErasureModel.add_all_qubit_quantum_error(krausNormalError, ["cx", "h"])
 
@@ -68,9 +73,9 @@ qc = CircuitParameters()
 TranspiledQC = transpile(qc, simulation)
 
 resultN = simulation.run(qc, noise_model=noiseNormalModel, shots=2000).result()
-resultE = simulation.run(qc, noise_model=noiseErasureModel, shots=2000).result()
+resultA = simulation.run(qc, noise_model=noiseErasureModel, shots=2000).result()
 countsN = resultN.get_counts()
-countsE = resultE.get_counts()
+countsA = resultE.get_counts()
 print("Measurement with loss: ", countsN)
 print("Measurements with loss + erasure flags: ", countsE)
 
