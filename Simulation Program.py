@@ -22,12 +22,9 @@ def CircuitParameters():
     qc.id(2) 
     
     #no loss
-    qc.cx(0,3)
-    qc.id(3)
-    qc.cx(0,4)
-    qc.id(4)
-    qc.cx(0,5)
-    qc.id(5)
+    qc.h(3)
+    qc.cx(3,4)
+    qc.cx(3,5)
 
     
     qc.barrier()
@@ -163,6 +160,16 @@ def loss_aware_decoder(counts):
         # data qubits = 0,1,2
         qubitval = [qubit_map[0], qubit_map[1], qubit_map[2]]
 
+        if ancillaval[0] == 0:
+            finalcounts[str(qubitval[0])] += freq
+        if ancillaval[1] == 0:
+            finalcounts[str(qubitval[1])] += freq
+        if ancillaval[2] == 0:
+            finalcounts[str(qubitval[2])] += freq
+
+        
+
+        '''
         if ancillaval.count(0) == 3:
             majority = "0" if qubitval.count(0) > 1 else "1"
             finalcounts[majority] += freq
@@ -178,8 +185,8 @@ def loss_aware_decoder(counts):
             else:
                 majority = "1"
             finalcounts[majority] += freq*(1-(3*ploss))
-                
-    
+        '''
+
     return finalcounts
 
 #NEED TO REVISE BY IMPLEMENTING PER QUBIT ANCILLA CORRECTION, 
