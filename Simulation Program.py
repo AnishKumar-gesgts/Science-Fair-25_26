@@ -10,7 +10,9 @@ import random
 
 # --- Step 1: Build a simple repetition code (encode |ψ> into 3 qubits) ---
 def CircuitParameters():
-    qc = QuantumCircuit(6,6)
+    qc = QuantumCircuit(9,9)
+
+    #have loss
     qc.h(0)             # Start with |+> = (|0>+|1>)/√2 as logical state
     qc.cx(0,1)         # Encode
     qc.id(0)
@@ -18,19 +20,30 @@ def CircuitParameters():
     qc.cx(0,2)
     qc.id(0)
     qc.id(2) 
-
-    qc.measure([0,1,2], [0,1,2])
-    qc.barrier()
-
-    qc.cx(0,3)
-    qc.x(3)
-    qc.cx(1,4)
-    qc.x(4)
-    qc.cx(2,5)
-    qc.x(5)
     
+    #no loss
+    qc.cx(0,3)
+    qc.id(3)
+    qc.cx(0,4)
+    qc.id(4)
+    qc.cx(0,5)
+    qc.id(5)
 
-    qc.measure([3,4,5], [3,4,5])
+    
+    qc.barrier()
+    
+    #1 means error, 0 means no error
+
+    qc.cx(0, 6)
+    qc.cx(3, 6)   
+
+    qc.cx(1, 7)
+    qc.cx(4, 7)
+
+    qc.cx(2, 8)
+    qc.cx(5, 8)
+    
+    qc.measure([0,1,2,3,4,5,6,7,8], [0,1,2,3,4,5,6,7,8])
     return qc
 
 
@@ -38,7 +51,7 @@ def CircuitParameters():
 
 # look at ancillas & syndrome extraction if time
 
-ploss = 0.2  # loss probability
+ploss = 0.001  # loss probability
 pdeterror = 0.01 #detection error
 
 A0 = np.array([[1, 0],[0, np.sqrt(1 - ploss)]])
@@ -81,10 +94,13 @@ NoiseModel.add_quantum_error(krausAncillaError, ["id"], [4])
 NoiseModel.add_quantum_error(krausAncillaError, ["id"], [5])
 '''
 # Apply independent amplitude damping to each qubit at each single-qubit gate
-NoiseModel.add_quantum_error(krausDataError, ["h"], [0])  # qubit 0 H
-NoiseModel.add_quantum_error(krausDataError, ["id"], [0]) # qubit 0 idle
-NoiseModel.add_quantum_error(krausDataError, ["id"], [1]) # qubit 1 idle
-NoiseModel.add_quantum_error(krausDataError, ["id"], [2]) # qubit 2 idle
+nyqubit = random.randint(0,2)
+NoiseModel.add_quantum_error(krausDataError, ["id"], [nyqubit])
+'''NoiseModel.add_quantum_error(krausDataError, ["id"], [1])
+NoiseModel.add_quantum_error(krausDataError, ["id"], [2])'''
+
+
+
 
 
 
@@ -125,41 +141,53 @@ def normal_decoder(First3Qubits):
 
 #need to write
 
-def loss_aware_decoder(First3Qubits):
-    finalcountsnormal = {"0":0, "1":0}
-    for value, freq in counts.items():
-        error = value[:3].count("1") > 1
-        if error == False:
-            first3value = value[-3:]
-            if first3value.count("0") > 1:
+def loss_aware_decoder(counts):
+    finalcounts = {"0": 0, "1": 0}
+    for value,freq in counts.items():
+    # map qubits to positions in the bitstring
+    # value string: [cbit8, cbit7, cbit6, cbit5, cbit4, cbit3, cbit2, cbit1, cbit0]
+        qubit_map = {
+            0: int(value[8]),  # qubit 0
+            1: int(value[7]),  # qubit 1
+            2: int(value[6]),  # qubit 2
+            3: int(value[5]),  # qubit 3
+            4: int(value[4]),  # qubit 4
+            5: int(value[3]),  # qubit 5
+            6: int(value[2]),  # qubit 6
+            7: int(value[1]),  # qubit 7
+            8: int(value[0]),  # qubit 8
+        }
+
+        # ancilla = qubits 6,7,8
+        ancillaval = [qubit_map[6], qubit_map[7], qubit_map[8]]
+        # data qubits = 0,1,2
+        qubitval = [qubit_map[0], qubit_map[1], qubit_map[2]]
+
+        if ancillaval.count(0) == 3:
+            majority = "0" if qubitval.count(0) > 1 else "1"
+            finalcounts[majority] += freq
+        elif ancillaval.count(0) == 2:
+            majority = "0" if qubitval.count(0) > 1 else "1"
+            finalcounts[majority] += freq*(1-(1*ploss))
+        elif ancillaval.count(0) == 1:
+            majority = "0" if qubitval.count(0) > 1 else "1"
+            finalcounts[majority] += freq*(1-(2*ploss))
+        else:
+            if qubitval.count("0") > 1:
                 majority = "0"  
             else:
                 majority = "1"
-            finalcountsnormal[majority] += freq
-    return finalcountsnormal
-
-def loss_aware_decoder(counts):
+            finalcounts[majority] += freq*(1-(3*ploss))
+                
     
-    finalcountsnormal = {"0": 0, "1": 0}
+    return finalcounts
 
-    for value, freq in counts.items():
-        # Slice bits
-        ancillaval = value[:3]  # first 3 bits = ancillas 3,4,5
-        qubitval = value[-3:]    # last 3 bits = data 0,1,2
-
-        # Only count if ancilla indicates no erasure
-        # Adjust this depending on your convention; here we assume "0" = no error
-        if (ancillaval.count("1") >1):
-            # Majority vote on data qubits
-            if qubitval.count("0") > 1:
-                majority = "0"
-            else:
-                majority = "1"
-            finalcountsnormal[majority] += freq
-    return finalcountsnormal
+#NEED TO REVISE BY IMPLEMENTING PER QUBIT ANCILLA CORRECTION, 
+#CAN REMOVE THOSE QUBITS AND THEN MAKE MAJORITY 1,0, OR 0.5
         
 
 
 print("Normal decoder:", normal_decoder(First3Qubits))
-print("Erasrue decoder:", loss_aware_decoder(First3Qubits))
+print("Erasrue decoder:", loss_aware_decoder(counts))
 print("Raw measurement results with qubit loss:", counts)
+
