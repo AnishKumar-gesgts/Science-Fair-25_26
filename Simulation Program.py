@@ -15,30 +15,28 @@ def CircuitParameters():
     #have loss
     qc.h(0)             # Start with |+> = (|0>+|1>)/√2 as logical state
     qc.cx(0,1)         # Encode
-    qc.id(0)
-    qc.id(1) 
     qc.cx(0,2)
+
+    qc.cx(0, 6)
     qc.id(0)
-    qc.id(2) 
+    qc.cx(0, 6)
+    
+    qc.cx(1, 7)
+    qc.id(1) 
+    qc.cx(1, 7)
+
+    qc.cx(2, 8)
+    qc.id(2)
+    qc.cx(2, 8)
+    
     
     #no loss
     qc.h(3)
     qc.cx(3,4)
     qc.cx(3,5)
 
+
     
-    qc.barrier()
-    
-    #1 means error, 0 means no error
-
-    qc.cx(0, 6)
-    qc.cx(3, 6)   
-
-    qc.cx(1, 7)
-    qc.cx(4, 7)
-
-    qc.cx(2, 8)
-    qc.cx(5, 8)
     
     qc.measure([0,1,2,3,4,5,6,7,8], [0,1,2,3,4,5,6,7,8])
     return qc
@@ -48,7 +46,7 @@ def CircuitParameters():
 
 # look at ancillas & syndrome extraction if time
 
-ploss = 0.001  # loss probability
+ploss = 0.003  # loss probability
 pdeterror = 0.01 #detection error
 
 A0 = np.array([[1, 0],[0, np.sqrt(1 - ploss)]])
@@ -117,10 +115,15 @@ for value, frequency1 in counts.items():
     first3value = value[-3:]  # Get the first 3 bits (data qubits)
     First3Qubits[first3value] = First3Qubits.get(first3value, 0) + frequency1
 
-Last3Qubits = {}
+Middle3Qubits = {}
 for value, frequency2 in counts.items():
+    middle3value = value[3:-3]  # Get the first 3 bits (data qubits)
+    Middle3Qubits[middle3value] = Middle3Qubits.get(middle3value, 0) + frequency2
+
+Last3Qubits = {}
+for value, frequency3 in counts.items():
     last3value = value[:3]  # Get the first 3 bits (data qubits)
-    Last3Qubits[last3value] = Last3Qubits.get(last3value, 0) + frequency2
+    Last3Qubits[last3value] = Last3Qubits.get(last3value, 0) + frequency3
         
 
 
@@ -135,6 +138,16 @@ def normal_decoder(First3Qubits):
             majority = "1"
         finalcountsnormal[majority] += freq
     return finalcountsnormal
+
+def noerror_decoder(Middle3Qubits):
+    finalcountsnoerror = {"0":0, "1":0}
+    for value, freq in Middle3Qubits.items():
+        if value.count("0") > 1:
+            majority = "0"  
+        else:
+            majority = "1"
+        finalcountsnoerror[majority] += freq
+    return finalcountsnoerror
 
 #need to write
 
@@ -195,6 +208,7 @@ def loss_aware_decoder(counts):
 
 
 print("Normal decoder:", normal_decoder(First3Qubits))
-print("Erasrue decoder:", loss_aware_decoder(counts))
+print("Ancilla decoder:", loss_aware_decoder(counts))
+print("No-error decoder: ", noerror_decoder(Middle3Qubits))
 print("Raw measurement results with qubit loss:", counts)
 
