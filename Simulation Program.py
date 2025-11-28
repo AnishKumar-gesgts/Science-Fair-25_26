@@ -17,6 +17,10 @@ def CircuitParameters():
     qc.cx(0,1)         # Encode
     qc.cx(0,2)
 
+    qc.cx(0,3)
+    qc.cx(1,4)
+    qc.cx(2,5)
+
     qc.cx(0, 6)
     qc.id(0)
     qc.cx(0, 6)
@@ -29,15 +33,8 @@ def CircuitParameters():
     qc.id(2)
     qc.cx(2, 8)
     
-    
     #no loss
-    qc.h(3)
-    qc.cx(3,4)
-    qc.cx(3,5)
 
-
-    
-    
     qc.measure([0,1,2,3,4,5,6,7,8], [0,1,2,3,4,5,6,7,8])
     return qc
 
