@@ -4,6 +4,7 @@ from qiskit_aer import Aer
 from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel
 from qiskit_aer.noise.errors import kraus_error
+from qiskit.circuit import Delay
 import random
 
 
@@ -13,37 +14,43 @@ def CircuitParameters():
     qc = QuantumCircuit(9,9)
 
     #have loss
-    qc.h(0)             # Start with |+> = (|0>+|1>)/√2 as logical state
-    qc.cx(0,1)         # Encode
-    qc.cx(0,2)
+    qc.h(0)
+    qc.cx(0, 1)
+    qc.cx(0, 2)
 
-    qc.cx(0,3)
-    qc.cx(1,4)
-    qc.cx(2,5)
-
-    qc.cx(0, 6)
-    qc.id(0)
-    qc.cx(0, 6)
+    # Logical block B (clean/reference block) - prepare same logical state independently
+    qc.cx(0, 3)
+    qc.cx(1, 4)
+    qc.cx(2, 5)
     
+    qc.append(Delay(100), [0])
+    qc.append(Delay(100), [1])
+    qc.append(Delay(100), [2])
+
+
+    # Ancilla flags (ancilla i = XOR(dataA_i, dataB_i) )
+    # ancilla = 1 if data bits differ (i.e., disagreement / possible error)
+    qc.cx(0, 6)
+    qc.cx(3, 6)
+
     qc.cx(1, 7)
-    qc.id(1) 
-    qc.cx(1, 7)
+    qc.cx(4, 7)
 
     qc.cx(2, 8)
-    qc.id(2)
-    qc.cx(2, 8)
+    qc.cx(5, 8)
+
+    qc.append(Delay(100), [6])
+    qc.append(Delay(100), [7])
+    qc.append(Delay(100), [8])
     
     #no loss
 
     qc.measure([0,1,2,3,4,5,6,7,8], [0,1,2,3,4,5,6,7,8])
     return qc
 
-
-
-
 # look at ancillas & syndrome extraction if time
 
-ploss = 0.003  # loss probability
+ploss = 0.1  # loss probability
 pdeterror = 0.01 #detection error
 
 A0 = np.array([[1, 0],[0, np.sqrt(1 - ploss)]])
@@ -56,40 +63,18 @@ krausAncillaError = kraus_error([DetectionError0, DetectionError1])
 
 #qutrit (3by3 matrix, lol) WHICH DONT WORK NOOOOOOOO
 
-
-
-
-
-'''⚙️ 2. What makes a Kraus error “erasure-compatible”?
-
-A noise process is erasure-compatible if:
-
-The environment state corresponding to the error is orthogonal and distinguishable,
-i.e., we can know which qubit was affected.
-
-The process can be represented as a mapping into an extended Hilbert space,
-e.g., from 
-∣0⟩,∣1⟩ → ∣0⟩,∣1⟩,∣𝑒⟩, where |e⟩ is a “flagged erasure” state.
-
-The hardware can produce a classical signal (“no click”, “no fluorescence”, “leaked energy level”) corresponding to that event.'''
-
-#Quantum Error Object
-
-
 #think of complex numbers, preserving probabilities through identitiy matrices 
 #100% probability satisfied array [1,0], [0,1] is identity
 
 NoiseModel = NoiseModel()
-'''
-NoiseModel.add_quantum_error(krausAncillaError, ["id"], [3])
-NoiseModel.add_quantum_error(krausAncillaError, ["id"], [4])
-NoiseModel.add_quantum_error(krausAncillaError, ["id"], [5])
-'''
+
 # Apply independent amplitude damping to each qubit at each single-qubit gate
-nyqubit = random.randint(0,2)
-NoiseModel.add_quantum_error(krausDataError, ["id"], [nyqubit])
-'''NoiseModel.add_quantum_error(krausDataError, ["id"], [1])
-NoiseModel.add_quantum_error(krausDataError, ["id"], [2])'''
+
+for q in (0,1,2):
+    NoiseModel.add_quantum_error(krausDataError, ["delay"], [q])
+for q in (6,7,8):
+    NoiseModel.add_quantum_error(krausAncillaError, ["delay"], [q])
+
 
 
 
@@ -169,33 +154,32 @@ def loss_aware_decoder(counts):
         ancillaval = [qubit_map[6], qubit_map[7], qubit_map[8]]
         # data qubits = 0,1,2
         qubitval = [qubit_map[0], qubit_map[1], qubit_map[2]]
-
-        if ancillaval[0] == 0:
-            finalcounts[str(qubitval[0])] += freq
-        if ancillaval[1] == 0:
-            finalcounts[str(qubitval[1])] += freq
-        if ancillaval[2] == 0:
-            finalcounts[str(qubitval[2])] += freq
-
         
-
-        '''
-        if ancillaval.count(0) == 3:
-            majority = "0" if qubitval.count(0) > 1 else "1"
-            finalcounts[majority] += freq
-        elif ancillaval.count(0) == 2:
-            majority = "0" if qubitval.count(0) > 1 else "1"
-            finalcounts[majority] += freq*(1-(1*ploss))
-        elif ancillaval.count(0) == 1:
-            majority = "0" if qubitval.count(0) > 1 else "1"
-            finalcounts[majority] += freq*(1-(2*ploss))
+        storeval = []
+        for i in range(3):
+            if ancillaval[i] == 0:
+                storeval.append(qubitval[i])
+        
+        if len(storeval) == 0:
+            continue
         else:
-            if qubitval.count("0") > 1:
-                majority = "0"  
-            else:
-                majority = "1"
-            finalcounts[majority] += freq*(1-(3*ploss))
-        '''
+            majorityvote = sum(storeval)/len(storeval)
+            if len(storeval) != 0:
+                if majorityvote > 0.5:
+                    finalval = "1"
+                    Tie = False
+                elif majorityvote < 0.5:
+                    finalval = "0"
+                    Tie = False
+                elif majorityvote == 0.5:
+                    Tie = True
+
+                if Tie:
+                    finalcounts["0"] += freq/2
+                    finalcounts["1"] += freq/2
+                elif Tie == False:
+                    finalcounts[finalval] += freq
+
 
     return finalcounts
 
