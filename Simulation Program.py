@@ -18,18 +18,17 @@ def CircuitParameters():
     qc.cx(0, 1)
     qc.cx(0, 2)
 
-    # Logical block B (clean/reference block) - prepare same logical state independently
+    #dont have loss
     qc.cx(0, 3)
     qc.cx(1, 4)
     qc.cx(2, 5)
     
+    #loss happens here
     qc.append(Delay(100), [0])
     qc.append(Delay(100), [1])
     qc.append(Delay(100), [2])
 
-
-    # Ancilla flags (ancilla i = XOR(dataA_i, dataB_i) )
-    # ancilla = 1 if data bits differ (i.e., disagreement / possible error)
+    #double cx acts as XOR gate w or w/out error
     qc.cx(0, 6)
     qc.cx(3, 6)
 
@@ -39,18 +38,18 @@ def CircuitParameters():
     qc.cx(2, 8)
     qc.cx(5, 8)
 
+    #add detection error here
     qc.append(Delay(100), [6])
     qc.append(Delay(100), [7])
     qc.append(Delay(100), [8])
     
-    #no loss
 
     qc.measure([0,1,2,3,4,5,6,7,8], [0,1,2,3,4,5,6,7,8])
     return qc
 
 # look at ancillas & syndrome extraction if time
 
-ploss = 0.1  # loss probability
+ploss = 0.5  # loss probability
 pdeterror = 0.01 #detection error
 
 A0 = np.array([[1, 0],[0, np.sqrt(1 - ploss)]])
@@ -68,7 +67,7 @@ krausAncillaError = kraus_error([DetectionError0, DetectionError1])
 
 NoiseModel = NoiseModel()
 
-# Apply independent amplitude damping to each qubit at each single-qubit gate
+# Apply amplitude damping to delay gates for guaranteed error
 
 for q in (0,1,2):
     NoiseModel.add_quantum_error(krausDataError, ["delay"], [q])
@@ -92,19 +91,19 @@ TranspiledQC = transpile(qc, simulation)
 result = simulation.run(qc, noise_model=NoiseModel, shots=2000).result()
 counts = result.get_counts()
 
-First3Qubits = {}
+First3Qubits = {} #error data qubits
 for value, frequency1 in counts.items():
-    first3value = value[-3:]  # Get the first 3 bits (data qubits)
+    first3value = value[-3:] 
     First3Qubits[first3value] = First3Qubits.get(first3value, 0) + frequency1
 
-Middle3Qubits = {}
+Middle3Qubits = {} #ideal data qubits
 for value, frequency2 in counts.items():
-    middle3value = value[3:-3]  # Get the first 3 bits (data qubits)
+    middle3value = value[3:-3]  
     Middle3Qubits[middle3value] = Middle3Qubits.get(middle3value, 0) + frequency2
 
-Last3Qubits = {}
+Last3Qubits = {} #ancilla qubits
 for value, frequency3 in counts.items():
-    last3value = value[:3]  # Get the first 3 bits (data qubits)
+    last3value = value[:3] 
     Last3Qubits[last3value] = Last3Qubits.get(last3value, 0) + frequency3
         
 
@@ -136,18 +135,17 @@ def noerror_decoder(Middle3Qubits):
 def loss_aware_decoder(counts):
     finalcounts = {"0": 0, "1": 0}
     for value,freq in counts.items():
-    # map qubits to positions in the bitstring
-    # value string: [cbit8, cbit7, cbit6, cbit5, cbit4, cbit3, cbit2, cbit1, cbit0]
+    
         qubit_map = {
-            0: int(value[8]),  # qubit 0
-            1: int(value[7]),  # qubit 1
-            2: int(value[6]),  # qubit 2
-            3: int(value[5]),  # qubit 3
-            4: int(value[4]),  # qubit 4
-            5: int(value[3]),  # qubit 5
-            6: int(value[2]),  # qubit 6
-            7: int(value[1]),  # qubit 7
-            8: int(value[0]),  # qubit 8
+            0: int(value[8]),  #qubit 0
+            1: int(value[7]),  #qubit 1
+            2: int(value[6]),  #qubit 2
+            3: int(value[5]),  #qubit 3
+            4: int(value[4]),  #qubit 4
+            5: int(value[3]),  #qubit 5
+            6: int(value[2]),  #qubit 6
+            7: int(value[1]),  #qubit 7
+            8: int(value[0]),  #qubit 8
         }
 
         # ancilla = qubits 6,7,8
@@ -156,22 +154,31 @@ def loss_aware_decoder(counts):
         qubitval = [qubit_map[0], qubit_map[1], qubit_map[2]]
         
         storeval = []
+
         for i in range(3):
             if ancillaval[i] == 0:
                 storeval.append(qubitval[i])
+
+            else:
+                storeval.append(qubitval[i])
+
+
+
+        
+
         
         if len(storeval) == 0:
             continue
         else:
             majorityvote = sum(storeval)/len(storeval)
             if len(storeval) != 0:
-                if majorityvote > 0.5:
+                if majorityvote > 0.55:
                     finalval = "1"
                     Tie = False
-                elif majorityvote < 0.5:
+                elif majorityvote < 0.45:
                     finalval = "0"
                     Tie = False
-                elif majorityvote == 0.5:
+                else:
                     Tie = True
 
                 if Tie:
