@@ -8,8 +8,6 @@ from qiskit.circuit import Delay
 import random
 
 
-
-# --- Step 1: Build a simple repetition code (encode |ψ> into 3 qubits) ---
 def CircuitParameters():
     qc = QuantumCircuit(9,9)
 
@@ -73,12 +71,6 @@ for q in (0,1,2):
     NoiseModel.add_quantum_error(krausDataError, ["delay"], [q])
 for q in (6,7,8):
     NoiseModel.add_quantum_error(krausAncillaError, ["delay"], [q])
-
-
-
-
-
-
 
 #id  means that the circuit will automatically apply the error to all processes, like idle instead of identity
 
