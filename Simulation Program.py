@@ -7,27 +7,20 @@ from qiskit_aer.noise.errors import kraus_error
 from qiskit.circuit import Delay
 import random
 
-
-
-# --- Step 1: Build a simple repetition code (encode |ψ> into 3 qubits) ---
 def CircuitParameters():
     qc = QuantumCircuit(9,9)
-
     #have loss
     qc.h(0)
     qc.cx(0, 1)
     qc.cx(0, 2)
-
     #dont have loss
     qc.cx(0, 3)
     qc.cx(1, 4)
     qc.cx(2, 5)
-    
     #loss happens here
     qc.append(Delay(100), [0])
     qc.append(Delay(100), [1])
     qc.append(Delay(100), [2])
-
     #double cx acts as XOR gate w or w/out error
     qc.cx(0, 6)
     qc.cx(3, 6)
@@ -37,17 +30,13 @@ def CircuitParameters():
 
     qc.cx(2, 8)
     qc.cx(5, 8)
-
     #add detection error here
     qc.append(Delay(100), [6])
     qc.append(Delay(100), [7])
     qc.append(Delay(100), [8])
-    
-
+    #final measure
     qc.measure([0,1,2,3,4,5,6,7,8], [0,1,2,3,4,5,6,7,8])
     return qc
-
-# look at ancillas & syndrome extraction if time
 
 ploss = 0.5  # loss probability
 pdeterror = 0.01 #detection error
