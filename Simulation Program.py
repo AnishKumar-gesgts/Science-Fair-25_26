@@ -7,6 +7,10 @@ from qiskit_aer.noise.errors import kraus_error
 from qiskit.circuit import Delay
 import random
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 030513fa8e66a6e3941628c20f2efd91d1963b23
 def CircuitParameters():
     qc = QuantumCircuit(9,9)
     #have loss
@@ -62,12 +66,6 @@ for q in (0,1,2):
     NoiseModel.add_quantum_error(krausDataError, ["delay"], [q])
 for q in (6,7,8):
     NoiseModel.add_quantum_error(krausAncillaError, ["delay"], [q])
-
-
-
-
-
-
 
 #id  means that the circuit will automatically apply the error to all processes, like idle instead of identity
 
