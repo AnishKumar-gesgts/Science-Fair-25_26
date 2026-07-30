@@ -49,8 +49,6 @@ DetectionError0 = np.array([[1, 0],[0, np.sqrt(1 - pdeterror)]])
 DetectionError1 = np.array([[0, np.sqrt(pdeterror)], [0, 0]])
 krausAncillaError = kraus_error([DetectionError0, DetectionError1])
 
-#qutrit (3by3 matrix, lol) WHICH DONT WORK NOOOOOOOO
-
 #think of complex numbers, preserving probabilities through identitiy matrices 
 #100% probability satisfied array [1,0], [0,1] is identity
 
