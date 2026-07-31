@@ -31,23 +31,15 @@ Logical 0 -> |000>
 Logical 1 -> |111>
 ```
 
-Each data qubit has a sensor ancilla. The data qubit and sensor interact as:
+Three additional ancilla qubits act as idealized loss sensors, giving a total of
+six qubits. Each data qubit is paired with one sensor. Instead of comparing a
+damaged qubit with an untouched copy, the simulation directly couples each data
+qubit to its sensor through a controlled `RY` rotation followed by a
+sensor-controlled `X` gate.
 
-```text
-|0>|0_sensor> -> |0>|0_sensor>
-|1>|0_sensor> -> sqrt(1-p)|1>|0_sensor>
-                 + sqrt(p)|0>|1_sensor>
-```
-
-Here, `p` is the amplitude-damping probability. The `|1_sensor>` branch identifies
-a damping jump: the data qubit relaxed from `|1>` to `|0>`.
-
-The circuit creates this transformation with a controlled `RY` rotation followed
-by a sensor-controlled `X` gate. This is a unitary system-and-environment model
-of the amplitude-damping channel, also called a Stinespring dilation.
-
-The sensor is an idealized model of hardware that can reveal energy relaxation.
-It is not a design for a physical sensor.
+A sensor measured as `1` identifies an amplitude-damping jump in which its data
+qubit relaxed from `|1>` to `|0>`. The sensor is an idealized model of hardware
+that can reveal energy relaxation, not a design for a physical sensor.
 
 ## The two decoders
 
