@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loss-aware-ancilla-decoding"
+version = "1.0.0"
+description = "An educational simulation of loss-aware decoding for a repetition-encoded quantum memory."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "qiskit>=2.1,<3",
+    "qiskit-aer>=0.17,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+loss-aware-decoder = "loss_aware_qec.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
