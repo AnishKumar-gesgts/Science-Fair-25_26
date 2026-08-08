@@ -1,5 +1,7 @@
 # Loss-Aware Hardware-Ancilla Decoding
 
+Parent project: [[Anish's Second Brain/Projects/Quantum/Quantum Error Correction Research|Quantum research]]
+
 [![tests](https://github.com/AnishKumar-gesgts/Loss-Aware-Hardware-Ancilla-Decoding/actions/workflows/tests.yml/badge.svg)](https://github.com/AnishKumar-gesgts/Loss-Aware-Hardware-Ancilla-Decoding/actions/workflows/tests.yml)
 
 This educational Qiskit project tests a simple idea: **can a decoder recover a

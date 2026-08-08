@@ -47,8 +47,7 @@ trials that produce the correct logical output, with abstentions counted as
 unsuccessful. Coverage is the percentage of trials for which the decoder
 produces an answer. Conditional accuracy is the percentage of non-abstained
 answers that are correct. Conditional accuracy must be viewed alongside
-coverage, since a decoder could otherwise appear highly accurate by refusing to
-answer difficult cases.
+coverage, since a decoder could otherwise appear highly accurate by refusing toanswer difficult cases.
 
 With perfect sensors and balanced logical inputs, the expected success of the
 standard majority decoder is
